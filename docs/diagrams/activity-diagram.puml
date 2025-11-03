@@ -1,0 +1,158 @@
+@startuml Diagrama de Atividade - Mover Tarefa no Kanban
+
+skinparam backgroundColor #FFFFFF
+skinparam activityBackgroundColor #E8F5E9
+skinparam activityBorderColor #2E7D32
+skinparam activityStartColor #4CAF50
+skinparam activityEndColor #F44336
+skinparam activityBarColor #1976D2
+skinparam activityDiamondBackgroundColor #FFF3E0
+skinparam activityDiamondBorderColor #FF9800
+skinparam partitionBorderColor #1976D2
+skinparam partitionBackgroundColor #E3F2FD
+
+|Usuário|
+start
+:Acessa Quadro Kanban;
+:Visualiza tarefas organizadas
+por status (Ready, In Progress,
+In Review, Done);
+
+|Usuário|
+:Seleciona tarefa para mover;
+note right
+  Usuário clica e arrasta
+  a tarefa no quadro Kanban
+end note
+
+:Arrasta tarefa para
+nova coluna;
+
+|Frontend|
+:Captura evento de
+drag-and-drop;
+
+:Atualiza UI otimisticamente
+(mostra tarefa na nova coluna);
+note right
+  Atualização otimista proporciona
+  feedback imediato ao usuário
+end note
+
+:Envia requisição PATCH
+para backend
+(/tasks/:id/status);
+
+|Backend API|
+:Recebe requisição
+PATCH;
+
+:Valida autenticação
+(JWT token);
+
+if (Token válido?) then (sim)
+  :Extrai dados da requisição
+  (taskId, novo status);
+
+  |Serviço de Tarefas|
+  :Busca tarefa no banco
+  de dados;
+
+  if (Tarefa existe?) then (sim)
+    if (Usuário tem permissão?) then (sim)
+      :Atualiza status da tarefa
+      no banco de dados;
+
+      if (Status = "done"?) then (sim)
+        :Define completed_at
+        com timestamp atual;
+      endif
+
+      |Repositório|
+      :Executa UPDATE no
+      PostgreSQL;
+
+      :Confirma transação;
+
+      |WebSocket Server|
+      :Emite evento "task:updated"
+      para sala do projeto;
+      note right
+        Broadcast em tempo real
+        para todos usuários
+        conectados ao projeto
+      end note
+
+      |Backend API|
+      :Retorna resposta
+      HTTP 200 com tarefa
+      atualizada;
+
+      |Frontend|
+      :Recebe confirmação
+      do backend;
+
+      :Mantém UI atualizada;
+
+      |Outros Clientes Conectados|
+      :Recebem evento WebSocket;
+
+      :Atualizam quadro Kanban
+      automaticamente;
+      note left
+        Atualização em tempo real
+        sem necessidade de refresh
+      end note
+
+      |Usuário|
+      :Visualiza tarefa na
+      nova coluna confirmada;
+
+      stop
+
+    else (não)
+      |Backend API|
+      :Retorna erro 403
+      (Forbidden);
+
+      |Frontend|
+      :Reverte atualização
+      otimista;
+
+      :Exibe mensagem de erro
+      "Sem permissão";
+
+      stop
+    endif
+
+  else (não)
+    |Backend API|
+    :Retorna erro 404
+    (Not Found);
+
+    |Frontend|
+    :Reverte atualização
+    otimista;
+
+    :Exibe mensagem de erro
+    "Tarefa não encontrada";
+
+    stop
+  endif
+
+else (não)
+  |Backend API|
+  :Retorna erro 401
+  (Unauthorized);
+
+  |Frontend|
+  :Reverte atualização
+  otimista;
+
+  :Redireciona para
+  página de login;
+
+  stop
+endif
+
+@enduml

@@ -1,0 +1,165 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.vite/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+test-results/
+playwright-report/
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+.buildpath
+.externalToolBuilders/
+nbproject/
+.gradle/
+.cproject
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Docker
+*.log
+.dockerignore
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Uploads and user-generated content
+uploads/
+temp/
+tmp/
+
+# TypeScript
+*.tsbuildinfo
+.tscache/
+
+# ESLint
+.eslintcache
+
+# Prettier
+.prettierignore
+
+# Misc
+*.orig
+*.rej
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# Redis dump
+dump.rdb
+
+# PostgreSQL
+*.pgsql
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# Secrets
+secrets/
+.secrets/
+
+# Production deployment files
+.vercel/
+.netlify/
+.firebase/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Cloud functions
+functions/node_modules/
+functions/lib/
+
+# Sentry
+.sentryclirc
+
+# Local development
+.local/
+
+# MacOS
+.AppleDouble
+.LSOverride
+Icon

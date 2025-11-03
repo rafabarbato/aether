@@ -1,0 +1,210 @@
+@startuml Diagrama Entidade-Relacionamento Aether
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <b><u>x</u></b>
+!define foreign_key(x) <i>x</i>
+!define not_null(x) <b>x</b>
+
+skinparam linetype ortho
+skinparam backgroundColor #FFFFFF
+skinparam class {
+    BackgroundColor #E8F5E9
+    BorderColor #2E7D32
+    ArrowColor #1976D2
+    FontSize 11
+}
+
+' Entidades Principais
+
+entity "USERS\n(Usuários)" as users {
+    primary_key(id): INTEGER
+    --
+    not_null(username): VARCHAR(50) <<UNIQUE>>
+    not_null(email): VARCHAR(100) <<UNIQUE>>
+    not_null(password): VARCHAR(255)
+    not_null(first_name): VARCHAR(50)
+    not_null(last_name): VARCHAR(50)
+    photo_url: TEXT
+    not_null(role): ENUM(admin, manager, member)
+    not_null(is_active): BOOLEAN
+    last_login_at: TIMESTAMP
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+entity "TEAMS\n(Equipes)" as teams {
+    primary_key(id): INTEGER
+    --
+    not_null(name): VARCHAR(100) <<UNIQUE>>
+    description: TEXT
+    color: VARCHAR(20)
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+entity "USER_TEAM_ASSIGNMENTS\n(Atribuições de Equipe)" as user_teams {
+    primary_key(id): INTEGER
+    --
+    foreign_key(user_id): INTEGER
+    foreign_key(team_id): INTEGER
+    foreign_key(role_id): INTEGER
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+entity "PROJECTS\n(Projetos)" as projects {
+    primary_key(id): INTEGER
+    --
+    not_null(name): VARCHAR(200)
+    description: TEXT
+    color: VARCHAR(20)
+    foreign_key(owner_id): INTEGER
+    foreign_key(team_id): INTEGER
+    start_date: DATE
+    end_date: DATE
+    not_null(status): ENUM
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+entity "TASKS\n(Tarefas)" as tasks {
+    primary_key(id): INTEGER
+    --
+    foreign_key(project_id): INTEGER
+    not_null(title): VARCHAR(255)
+    description: TEXT
+    not_null(status): ENUM(ready, in_progress, in_review, done)
+    not_null(priority): ENUM(low, medium, high, urgent)
+    tag_label: VARCHAR(50)
+    foreign_key(assigned_to): INTEGER
+    foreign_key(created_by): INTEGER
+    estimated_hours: DECIMAL(10,2)
+    actual_hours: DECIMAL(10,2)
+    due_date: DATE
+    completed_at: TIMESTAMP
+    not_null(position): INTEGER
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+entity "COMMENTS\n(Comentários)" as comments {
+    primary_key(id): INTEGER
+    --
+    foreign_key(task_id): INTEGER
+    foreign_key(user_id): INTEGER
+    not_null(content): TEXT
+    foreign_key(parent_id): INTEGER
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+entity "ATTACHMENTS\n(Anexos)" as attachments {
+    primary_key(id): INTEGER
+    --
+    foreign_key(task_id): INTEGER
+    foreign_key(user_id): INTEGER
+    not_null(file_name): VARCHAR(255)
+    not_null(file_size): INTEGER
+    not_null(mime_type): VARCHAR(100)
+    not_null(file_path): TEXT
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+entity "NOTIFICATIONS\n(Notificações)" as notifications {
+    primary_key(id): INTEGER
+    --
+    foreign_key(user_id): INTEGER
+    not_null(type): ENUM
+    not_null(title): VARCHAR(255)
+    not_null(message): TEXT
+    foreign_key(related_task_id): INTEGER
+    foreign_key(related_project_id): INTEGER
+    not_null(is_read): BOOLEAN
+    read_at: TIMESTAMP
+    created_at: TIMESTAMP
+    updated_at: TIMESTAMP
+    deleted_at: TIMESTAMP
+}
+
+' Relacionamentos
+
+' User <-> Team (N:N através de user_team_assignments)
+users "1" -- "0..*" user_teams : possui
+teams "1" -- "0..*" user_teams : contém
+user_teams "0..*" -- "1" users : pertence a
+user_teams "0..*" -- "1" teams : membro de
+
+' User -> Project (1:N como proprietário)
+users "1" -- "0..*" projects : proprietário
+
+' Team -> Project (1:N)
+teams "1" -- "0..*" projects : possui
+
+' Project -> Task (1:N)
+projects "1" -- "0..*" tasks : contém
+
+' User -> Task (1:N como responsável)
+users "1" -- "0..*" tasks : atribuído a
+
+' User -> Task (1:N como criador)
+users "1" -- "0..*" tasks : criado por
+
+' Task -> Comment (1:N)
+tasks "1" -- "0..*" comments : possui
+
+' User -> Comment (1:N)
+users "1" -- "0..*" comments : autor
+
+' Comment -> Comment (1:N auto-relacionamento)
+comments "0..1" -- "0..*" comments : resposta de
+
+' Task -> Attachment (1:N)
+tasks "1" -- "0..*" attachments : possui
+
+' User -> Attachment (1:N)
+users "1" -- "0..*" attachments : enviado por
+
+' User -> Notification (1:N)
+users "1" -- "0..*" notifications : recebe
+
+' Task -> Notification (1:N opcional)
+tasks "0..1" -- "0..*" notifications : relacionado
+
+' Project -> Notification (1:N opcional)
+projects "0..1" -- "0..*" notifications : relacionado
+
+note right of users
+  Armazena informações dos usuários
+  com autenticação JWT e controle
+  de permissões por função (role).
+  Suporta soft delete.
+end note
+
+note right of tasks
+  Núcleo do sistema Kanban.
+  Status: ready, in_progress,
+  in_review, done.
+  Prioridades: low, medium,
+  high, urgent.
+end note
+
+note right of comments
+  Sistema de comentários
+  com suporte a respostas
+  aninhadas (parent_id).
+end note
+
+note right of notifications
+  Notificações em tempo real
+  via WebSocket para eventos
+  do sistema.
+end note
+
+@enduml
