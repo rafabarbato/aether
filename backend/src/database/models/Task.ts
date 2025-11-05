@@ -4,12 +4,14 @@ import sequelize from '../../config/database';
 export interface TaskAttributes {
   id: number;
   projectId: number;
+  groupId?: number;
+  milestoneId?: number;
   title: string;
   description?: string;
   status: 'ready' | 'in_progress' | 'in_review' | 'done';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   tagLabel?: string;
-  assignedTo?: number;
+  assignedTo?: number; // Keep for backward compatibility, deprecated in favor of many-to-many
   createdBy: number;
   estimatedHours?: number;
   actualHours?: number;
@@ -30,6 +32,8 @@ export interface TaskCreationAttributes
     | 'priority'
     | 'tagLabel'
     | 'assignedTo'
+    | 'groupId'
+    | 'milestoneId'
     | 'estimatedHours'
     | 'actualHours'
     | 'dueDate'
@@ -43,6 +47,8 @@ export interface TaskCreationAttributes
 class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
   public id!: number;
   public projectId!: number;
+  public groupId?: number;
+  public milestoneId?: number;
   public title!: string;
   public description?: string;
   public status!: 'ready' | 'in_progress' | 'in_review' | 'done';
@@ -74,6 +80,24 @@ Task.init(
       field: 'project_id',
       references: {
         model: 'projects',
+        key: 'id',
+      },
+    },
+    groupId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'group_id',
+      references: {
+        model: 'groups',
+        key: 'id',
+      },
+    },
+    milestoneId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'milestone_id',
+      references: {
+        model: 'milestones',
         key: 'id',
       },
     },

@@ -1,6 +1,8 @@
 import User from './User';
 import Team from './Team';
+import Group from './Group';
 import Project from './Project';
+import Milestone from './Milestone';
 import Task from './Task';
 import Comment from './Comment';
 import Attachment from './Attachment';
@@ -164,10 +166,93 @@ Project.hasMany(Notification, {
   as: 'notifications',
 });
 
+// Group <-> User (One-to-Many: Group owner)
+Group.belongsTo(User, {
+  foreignKey: 'owner_id',
+  as: 'owner',
+});
+
+User.hasMany(Group, {
+  foreignKey: 'owner_id',
+  as: 'ownedGroups',
+});
+
+// Project <-> Group (One-to-Many)
+Project.belongsTo(Group, {
+  foreignKey: 'group_id',
+  as: 'group',
+});
+
+Group.hasMany(Project, {
+  foreignKey: 'group_id',
+  as: 'projects',
+});
+
+// Milestone <-> Project (One-to-Many)
+Milestone.belongsTo(Project, {
+  foreignKey: 'project_id',
+  as: 'project',
+});
+
+Project.hasMany(Milestone, {
+  foreignKey: 'project_id',
+  as: 'milestones',
+});
+
+// Milestone <-> User (Many-to-One: created_by)
+Milestone.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator',
+});
+
+User.hasMany(Milestone, {
+  foreignKey: 'created_by',
+  as: 'createdMilestones',
+});
+
+// Task <-> Group (Many-to-One)
+Task.belongsTo(Group, {
+  foreignKey: 'group_id',
+  as: 'group',
+});
+
+Group.hasMany(Task, {
+  foreignKey: 'group_id',
+  as: 'tasks',
+});
+
+// Task <-> Milestone (Many-to-One)
+Task.belongsTo(Milestone, {
+  foreignKey: 'milestone_id',
+  as: 'milestone',
+});
+
+Milestone.hasMany(Task, {
+  foreignKey: 'milestone_id',
+  as: 'tasks',
+});
+
+// Task <-> User (Many-to-Many for multiple assignees)
+Task.belongsToMany(User, {
+  through: 'task_assignees',
+  foreignKey: 'task_id',
+  otherKey: 'user_id',
+  as: 'assignees',
+});
+
+User.belongsToMany(Task, {
+  through: 'task_assignees',
+  foreignKey: 'user_id',
+  otherKey: 'task_id',
+  as: 'assignedTasksMultiple',
+});
+
 export {
   User,
   Team,
+  Group,
   Project,
+  Milestone,
   Task,
   Comment,
   Attachment,
@@ -177,7 +262,9 @@ export {
 export default {
   User,
   Team,
+  Group,
   Project,
+  Milestone,
   Task,
   Comment,
   Attachment,

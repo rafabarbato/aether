@@ -29,11 +29,11 @@ export const connectDatabase = async (): Promise<void> => {
   try {
     await sequelize.authenticate();
     logger.info('Database connection established successfully');
+    logger.info('Using init.sql for database schema management');
 
-    if (config.env === 'development') {
-      await sequelize.sync({ alter: true });
-      logger.info('Database synchronized');
-    }
+    // Note: We don't use sequelize.sync() anymore
+    // The database schema is managed by /backend/database/init.sql
+    // To rebuild the database: docker compose down -v && docker compose up -d
   } catch (error) {
     logger.error('Unable to connect to database:', error);
     throw error;

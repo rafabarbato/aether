@@ -351,28 +351,85 @@ class TaskController {
 
 ### Prerequisites
 
-- Node.js 18+
-- PostgreSQL 15+
-- Redis 7+
+- Docker & Docker Compose (recommended)
+- OR Node.js 18+ with PostgreSQL 15+ and Redis 7+ installed locally
 - Git
 
-### 1. Clone Repository
+### Quick Start with Docker (Recommended)
 
 ```bash
+# 1. Clone the repository
 git clone <repository-url>
-cd Aether
+cd aether
+
+# 2. Configure environment variables
+cp .env.example .env
+# Edit .env if needed (default values work for Docker setup)
+
+# 3. Start all services (this will automatically initialize the database)
+docker compose up -d
+
+# 4. Check services are running
+docker compose ps
+
+# 5. (Optional) Seed database with test data
+docker compose exec backend npm run seed
 ```
 
-### 2. Backend Configuration
+That's it! The application is now running:
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3000`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+
+**Test Users** (after seeding):
+- Admin: `admin@aether.com` / `admin123`
+- Manager: `manager@aether.com` / `manager123`
+- Member: `user@aether.com` / `user123`
+
+### Database Initialization
+
+The database is automatically initialized when the PostgreSQL container starts using the `backend/database/init.sql` script. This script creates all tables, indexes, and constraints.
+
+To rebuild the database from scratch:
 
 ```bash
+# Stop and remove all containers and volumes
+docker compose down -v
+
+# Start fresh
+docker compose up -d
+
+# Seed data (optional)
+docker compose exec backend npm run seed
+```
+
+See `backend/database/README.md` for more details about the database schema.
+
+### Manual Installation (Without Docker)
+
+If you prefer to run services locally without Docker:
+
+#### 1. Install Dependencies
+
+```bash
+# Backend
 cd backend
 npm install
+
+# Frontend
+cd ../frontend
+npm install
 cd ..
+```
+
+#### 2. Configure Environment
+
+```bash
 cp .env.example .env
 ```
 
-Configure environment variables in `.env` (located in project root):
+Edit `.env` with your local database credentials:
 
 ```env
 DB_HOST=localhost
@@ -391,58 +448,34 @@ PORT=3000
 NODE_ENV=development
 ```
 
-Create database:
+#### 3. Initialize Database
 
 ```bash
-psql -U postgres
-CREATE DATABASE aether_task_management;
-\q
-```
+# Create database
+psql -U postgres -c "CREATE DATABASE aether_task_management;"
 
-Run migrations:
+# Run initialization script
+psql -U postgres -d aether_task_management -f backend/database/init.sql
 
-```bash
-npm run migrate
-```
-
-Start development server:
-
-```bash
-npm run dev
-```
-
-Backend available at `http://localhost:3000`
-
-### 3. Frontend Configuration
-
-```bash
-cd frontend
-npm install
-```
-
-Frontend uses the API URL configured in `vite.config.ts` proxy settings. For production builds, set `VITE_API_URL` environment variable.
-
-Start development server:
-
-```bash
-npm run dev
-```
-
-Frontend available at `http://localhost:5173`
-
-### 4. Test Data (Optional)
-
-Populate database with sample data:
-
-```bash
+# (Optional) Seed test data
 cd backend
 npm run seed
 ```
 
-Test users created:
-- Admin: `admin@aether.com` / `admin123`
-- Manager: `manager@aether.com` / `manager123`
-- Member: `user@aether.com` / `user123`
+#### 4. Start Services
+
+```bash
+# Terminal 1 - Backend
+cd backend
+npm run dev
+
+# Terminal 2 - Frontend
+cd frontend
+npm run dev
+```
+
+Frontend available at `http://localhost:5173`
+Backend available at `http://localhost:3000`
 
 ---
 
