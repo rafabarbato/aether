@@ -2,6 +2,8 @@ import { Op, WhereOptions } from 'sequelize';
 import Task, { TaskAttributes, TaskCreationAttributes } from '../models/Task';
 import User from '../models/User';
 import Project from '../models/Project';
+import Group from '../models/Group';
+import Milestone from '../models/Milestone';
 import Comment from '../models/Comment';
 import Attachment from '../models/Attachment';
 import ApiError from '../../utils/ApiError';
@@ -9,6 +11,8 @@ import logger from '../../utils/logger';
 
 export interface TaskFilters {
   projectId?: number;
+  groupId?: number;
+  milestoneId?: number;
   status?: string | string[];
   priority?: string | string[];
   assignedTo?: number | number[];
@@ -51,6 +55,14 @@ class TaskRepository {
             as: 'project',
           },
           {
+            model: Group,
+            as: 'group',
+          },
+          {
+            model: Milestone,
+            as: 'milestone',
+          },
+          {
             model: User,
             as: 'assignee',
             attributes: ['id', 'username', 'email', 'firstName', 'lastName', 'photoUrl'],
@@ -59,6 +71,12 @@ class TaskRepository {
             model: User,
             as: 'creator',
             attributes: ['id', 'username', 'email', 'firstName', 'lastName', 'photoUrl'],
+          },
+          {
+            model: User,
+            as: 'assignees',
+            attributes: ['id', 'username', 'email', 'firstName', 'lastName', 'photoUrl'],
+            through: { attributes: [] }, // Exclude junction table attributes
           },
           {
             model: Comment,
@@ -98,6 +116,14 @@ class TaskRepository {
 
       if (filters.projectId) {
         where.projectId = filters.projectId;
+      }
+
+      if (filters.groupId) {
+        where.groupId = filters.groupId;
+      }
+
+      if (filters.milestoneId) {
+        where.milestoneId = filters.milestoneId;
       }
 
       if (filters.status) {
@@ -154,6 +180,14 @@ class TaskRepository {
             as: 'project',
           },
           {
+            model: Group,
+            as: 'group',
+          },
+          {
+            model: Milestone,
+            as: 'milestone',
+          },
+          {
             model: User,
             as: 'assignee',
             attributes: ['id', 'username', 'email', 'firstName', 'lastName', 'photoUrl'],
@@ -162,6 +196,12 @@ class TaskRepository {
             model: User,
             as: 'creator',
             attributes: ['id', 'username', 'email', 'firstName', 'lastName', 'photoUrl'],
+          },
+          {
+            model: User,
+            as: 'assignees',
+            attributes: ['id', 'username', 'email', 'firstName', 'lastName', 'photoUrl'],
+            through: { attributes: [] }, // Exclude junction table attributes
           },
         ];
       }

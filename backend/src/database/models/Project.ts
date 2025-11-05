@@ -3,6 +3,7 @@ import sequelize from '../../config/database';
 
 export interface ProjectAttributes {
   id: number;
+  groupId?: number;
   name: string;
   description?: string;
   color?: string;
@@ -19,11 +20,12 @@ export interface ProjectAttributes {
 export interface ProjectCreationAttributes
   extends Optional<
     ProjectAttributes,
-    'id' | 'description' | 'color' | 'teamId' | 'startDate' | 'endDate' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'
+    'id' | 'groupId' | 'description' | 'color' | 'teamId' | 'startDate' | 'endDate' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'
   > {}
 
 class Project extends Model<ProjectAttributes, ProjectCreationAttributes> implements ProjectAttributes {
   public id!: number;
+  public groupId?: number;
   public name!: string;
   public description?: string;
   public color?: string;
@@ -44,6 +46,15 @@ Project.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+    },
+    groupId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'group_id',
+      references: {
+        model: 'groups',
+        key: 'id',
+      },
     },
     name: {
       type: DataTypes.STRING(200),
