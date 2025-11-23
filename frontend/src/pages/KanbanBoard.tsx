@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, useDraggable, useDroppable, DragStartEvent } from '@dnd-kit/core';
 import { ExternalLink, Search, Filter as FilterIcon, Plus } from 'lucide-react';
 import Layout from '../components/Layout';
+import TaskFormModal from '../components/TaskFormModal';
 import taskService from '../services/taskService';
 import { Task, TaskStatus } from '../types';
 
@@ -174,6 +175,7 @@ const KanbanBoard: React.FC = () => {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -267,7 +269,10 @@ const KanbanBoard: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 bg-aether-bg-elevated border border-aether-border-elevated text-aether-text-primary font-mono text-sm placeholder:text-aether-text-muted placeholder:text-xs focus:outline-none focus:border-aether-blue-primary transition-colors"
             />
           </div>
-          <button className="flex items-center gap-2 px-6 py-3 bg-aether-blue-primary text-white font-sans text-xs font-bold uppercase tracking-wider hover:bg-aether-blue-dark transition-colors">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-aether-blue-primary text-white font-sans text-xs font-bold uppercase tracking-wider hover:bg-aether-blue-dark transition-colors"
+          >
             <Plus className="w-4 h-4" strokeWidth={2.5} />
             New Task
           </button>
@@ -300,6 +305,14 @@ const KanbanBoard: React.FC = () => {
           </DragOverlay>
         </DndContext>
       )}
+
+      {/* Task Form Modal */}
+      <TaskFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={loadTasks}
+        projectId={selectedProject || undefined}
+      />
       </div>
     </Layout>
   );
