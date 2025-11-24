@@ -26,11 +26,6 @@ This project implements a comprehensive web-based task management and productivi
 3. Facilitate asynchronous collaboration between team members
 4. Provide metrics and insights on team productivity
 
-Screenshot of the current state version (0.0.1):
-
-<img width="1909" height="953" alt="image" src="https://github.com/user-attachments/assets/78658cb8-ad0f-452f-9805-ca761ec1145a" />
-
-
 ---
 
 ## Problem Statement
