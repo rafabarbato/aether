@@ -5,6 +5,18 @@ import ApiError from '../utils/ApiError';
 import logger from '../utils/logger';
 
 class ProjectService {
+  // Helper to sanitize date fields (convert empty strings to null)
+  private sanitizeDateFields(data: any): any {
+    const sanitized = { ...data };
+    if (sanitized.startDate === '' || sanitized.startDate === 'Invalid date') {
+      sanitized.startDate = null;
+    }
+    if (sanitized.endDate === '' || sanitized.endDate === 'Invalid date') {
+      sanitized.endDate = null;
+    }
+    return sanitized;
+  }
+
   async createProject(projectData: ProjectCreationAttributes, userId: number): Promise<Project> {
     try {
       // Verify group exists if provided
@@ -15,9 +27,12 @@ class ProjectService {
         }
       }
 
+      // Sanitize date fields
+      const sanitizedData = this.sanitizeDateFields(projectData);
+
       // Set owner to current user
       const project = await ProjectRepository.create({
-        ...projectData,
+        ...sanitizedData,
         ownerId: userId,
       });
 
@@ -58,7 +73,10 @@ class ProjectService {
         }
       }
 
-      const updatedProject = await ProjectRepository.update(projectId, updates);
+      // Sanitize date fields
+      const sanitizedUpdates = this.sanitizeDateFields(updates);
+
+      const updatedProject = await ProjectRepository.update(projectId, sanitizedUpdates);
 
       return await ProjectRepository.findById(projectId, true) as Project;
     } catch (error) {

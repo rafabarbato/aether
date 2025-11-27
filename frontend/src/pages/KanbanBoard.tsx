@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, useDraggable, useDroppable, DragStartEvent } from '@dnd-kit/core';
-import { ExternalLink, Search, Filter as FilterIcon, Plus } from 'lucide-react';
+import { ExternalLink, Search, Filter as FilterIcon, Plus, Edit2, Trash2 } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import Breadcrumb from '../components/Breadcrumb';
 import TaskFormModal from '../components/TaskFormModal';
+import TaskDetailModal from '../components/TaskDetailModal';
 import taskService from '../services/taskService';
-import { Task, TaskStatus } from '../types';
+import milestoneService from '../services/milestoneService';
+import projectService from '../services/projectService';
+import groupService from '../services/groupService';
+import { Task, TaskStatus, Milestone, Project, Group } from '../types';
 
 interface KanbanColumn {
   id: TaskStatus;
@@ -22,9 +28,12 @@ const COLUMNS: KanbanColumn[] = [
 interface TaskCardProps {
   task: Task;
   isDragging?: boolean;
+  onEdit?: (task: Task) => void;
+  onDelete?: (task: Task) => void;
+  onClick?: (task: Task) => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false, onEdit, onDelete, onClick }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `task-${task.id}`,
     data: { task },
@@ -48,15 +57,56 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-grab active:cursor-grabbing transition-all hover:shadow-md ${
+      className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all hover:shadow-md group ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
-      {/* Task Title */}
-      <div className="font-semibold text-gray-900 dark:text-white mb-2">
-        {task.title}
+      {/* Header with drag handle and actions */}
+      <div className="flex items-start justify-between mb-2">
+        <div
+          {...listeners}
+          {...attributes}
+          className="flex-1 cursor-grab active:cursor-grabbing"
+          onClick={(e) => {
+            // Only open detail if not dragging
+            if (!isDragging && onClick) {
+              onClick(task);
+            }
+          }}
+        >
+          {/* Task Title */}
+          <div className="font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            {task.title}
+          </div>
+        </div>
+
+        {/* Action buttons - visible on hover */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(task);
+              }}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              title="Edit task"
+            >
+              <Edit2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(task);
+              }}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              title="Delete task"
+            >
+              <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Task Description */}
@@ -122,9 +172,12 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
 interface KanbanColumnProps {
   column: KanbanColumn;
   tasks: Task[];
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
+  onTaskClick: (task: Task) => void;
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, tasks }) => {
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, tasks, onEdit, onDelete, onTaskClick }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -162,7 +215,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, tasks }) => {
             No tasks
           </div>
         ) : (
-          tasks.map((task) => <TaskCard key={task.id} task={task} />)
+          tasks.map((task) => <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} onClick={onTaskClick} />)
         )}
       </div>
     </div>
@@ -170,21 +223,52 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ column, tasks }) => {
 };
 
 const KanbanBoard: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const milestoneId = searchParams.get('milestoneId');
+
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | undefined>();
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
-    loadTasks();
-  }, [selectedProject]);
+    if (milestoneId) {
+      loadMilestone(parseInt(milestoneId));
+      loadTasks(parseInt(milestoneId));
+    } else {
+      loadTasks();
+    }
+  }, [milestoneId]);
 
-  const loadTasks = async () => {
+  const loadMilestone = async (id: number) => {
+    try {
+      const milestone = await milestoneService.getMilestoneById(id);
+      setSelectedMilestone(milestone);
+      if (milestone.projectId) {
+        const project = await projectService.getProjectById(milestone.projectId);
+        setSelectedProject(project);
+        if (project.groupId) {
+          const group = await groupService.getGroupById(project.groupId);
+          setSelectedGroup(group);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load milestone:', error);
+    }
+  };
+
+  const loadTasks = async (filterMilestoneId?: number) => {
     try {
       setIsLoading(true);
-      const filters = selectedProject ? { projectId: selectedProject } : {};
+      const filters = filterMilestoneId ? { milestoneId: filterMilestoneId } : {};
       const fetchedTasks = await taskService.getTasks(filters);
       setTasks(fetchedTasks);
     } catch (error) {
@@ -233,6 +317,28 @@ const KanbanBoard: React.FC = () => {
     }
   };
 
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteTask = async (task: Task) => {
+    if (!confirm(`Are you sure you want to delete "${task.title}"?`)) return;
+
+    try {
+      await taskService.deleteTask(task.id);
+      await loadTasks(milestoneId ? parseInt(milestoneId) : undefined);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      alert('Failed to delete task. Please try again.');
+    }
+  };
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
+
   const getTasksByStatus = (status: TaskStatus) => {
     return tasks.filter((task) => task.status === status);
   };
@@ -243,17 +349,34 @@ const KanbanBoard: React.FC = () => {
       )
     : tasks;
 
+  const breadcrumbItems = [];
+  if (selectedGroup) {
+    breadcrumbItems.push({ label: 'Groups', path: '/groups' });
+    breadcrumbItems.push({ label: selectedGroup.name, path: `/projects?groupId=${selectedGroup.id}` });
+  }
+  if (selectedProject) {
+    breadcrumbItems.push({ label: selectedProject.name, path: `/milestones?projectId=${selectedProject.id}` });
+  }
+  if (selectedMilestone) {
+    breadcrumbItems.push({ label: selectedMilestone.name });
+  }
+  if (!selectedMilestone && !selectedProject && !selectedGroup) {
+    breadcrumbItems.push({ label: 'All Tasks' });
+  }
+
   return (
     <Layout>
       <div className="p-8">
+        <Breadcrumb items={breadcrumbItems} />
+
         <div className="mb-8 flex items-center space-x-4">
           <div className="h-10 w-1 bg-aether-blue-primary"></div>
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-aether-text-primary uppercase tracking-tight">
-              Task Board
+              {selectedMilestone ? `${selectedMilestone.name} - Tasks` : 'Task Board'}
             </h1>
             <p className="text-aether-text-muted font-sans text-[10px] uppercase tracking-widest mt-1">
-              Manage Tasks with Drag and Drop
+              {selectedMilestone ? `Manage tasks in ${selectedMilestone.name}` : 'Manage Tasks with Drag and Drop'}
             </p>
           </div>
         </div>
@@ -291,6 +414,9 @@ const KanbanBoard: React.FC = () => {
                 key={column.id}
                 column={column}
                 tasks={getTasksByStatus(column.id)}
+                onEdit={handleEditTask}
+                onDelete={handleDeleteTask}
+                onTaskClick={handleTaskClick}
               />
             ))}
           </div>
@@ -309,10 +435,28 @@ const KanbanBoard: React.FC = () => {
       {/* Task Form Modal */}
       <TaskFormModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={loadTasks}
-        projectId={selectedProject || undefined}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTask(undefined);
+        }}
+        onSuccess={() => loadTasks(milestoneId ? parseInt(milestoneId) : undefined)}
+        projectId={selectedProject?.id || undefined}
+        milestoneId={selectedMilestone?.id || undefined}
+        task={editingTask}
       />
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedTask(null);
+          }}
+          onTaskUpdate={() => loadTasks(milestoneId ? parseInt(milestoneId) : undefined)}
+        />
+      )}
       </div>
     </Layout>
   );

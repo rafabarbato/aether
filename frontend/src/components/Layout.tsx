@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FolderOpen, Target, CheckSquare, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LayoutProps {
@@ -28,7 +28,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+    if (path === '/groups') {
+      // Highlight Groups nav item when on groups, projects, milestones, or tasks pages
+      return location.pathname === '/groups' ||
+             location.pathname === '/projects' ||
+             location.pathname === '/milestones' ||
+             location.pathname === '/tasks';
+    }
+    return location.pathname === path;
   };
 
   const formatDateTime = (date: Date) => {
@@ -107,36 +114,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <FolderOpen className="w-5 h-5 mr-3" strokeWidth={2} />
             <span className="font-sans text-xs font-bold uppercase tracking-widest">
               Groups
-            </span>
-          </Link>
-
-          <Link
-            to="/milestones"
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center px-4 py-3 border ${
-              isActive('/milestones')
-                ? 'bg-aether-bg-elevated border-aether-blue-primary text-aether-text-primary'
-                : 'border-transparent text-aether-text-muted hover:text-aether-text-primary hover:border-aether-border-elevated transition-all'
-            }`}
-          >
-            <Target className="w-5 h-5 mr-3" strokeWidth={2} />
-            <span className="font-sans text-xs font-bold uppercase tracking-widest">
-              Milestones
-            </span>
-          </Link>
-
-          <Link
-            to="/tasks"
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center px-4 py-3 border ${
-              isActive('/tasks')
-                ? 'bg-aether-bg-elevated border-aether-blue-primary text-aether-text-primary'
-                : 'border-transparent text-aether-text-muted hover:text-aether-text-primary hover:border-aether-border-elevated transition-all'
-            }`}
-          >
-            <CheckSquare className="w-5 h-5 mr-3" strokeWidth={2} />
-            <span className="font-sans text-xs font-bold uppercase tracking-widest">
-              Tasks
             </span>
           </Link>
         </nav>

@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Tag, Users, Clock, FolderOpen } from 'lucide-react';
-import taskService, { CreateTaskDto } from '../services/taskService';
+import taskService, { CreateTaskDto, UpdateTaskDto } from '../services/taskService';
 import userService from '../services/userService';
 import groupService from '../services/groupService';
 import projectService from '../services/projectService';
 import milestoneService from '../services/milestoneService';
-import { User, Group, Project, Milestone, TaskPriority } from '../types';
+import { User, Group, Project, Milestone, TaskPriority, Task } from '../types';
 
 interface TaskFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   projectId?: number;
+  milestoneId?: number;
+  task?: Task;
 }
 
 const PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
@@ -26,16 +28,18 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
   onClose,
   onSuccess,
   projectId,
+  milestoneId,
+  task,
 }) => {
   const [formData, setFormData] = useState<Partial<CreateTaskDto>>({
-    projectId: projectId || 0,
-    title: '',
-    description: '',
-    priority: 'medium',
-    status: 'ready',
-    estimatedHours: undefined,
-    dueDate: '',
-    tagLabel: '',
+    projectId: projectId || task?.projectId || 0,
+    title: task?.title || '',
+    description: task?.description || '',
+    priority: task?.priority || 'medium',
+    status: task?.status || 'ready',
+    estimatedHours: task?.estimatedHours || undefined,
+    dueDate: task?.dueDate ? task.dueDate.split('T')[0] : '',
+    tagLabel: task?.tagLabel || '',
   });
   const [assignees, setAssignees] = useState<number[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -48,9 +52,36 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Reset form data when task changes
+      if (task) {
+        setFormData({
+          projectId: task.projectId,
+          title: task.title,
+          description: task.description || '',
+          priority: task.priority,
+          status: task.status,
+          estimatedHours: task.estimatedHours || undefined,
+          dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+          tagLabel: task.tagLabel || '',
+        });
+        setAssignees(task.assignees?.map(a => a.id) || []);
+      } else {
+        setFormData({
+          projectId: projectId || 0,
+          milestoneId: milestoneId,
+          title: '',
+          description: '',
+          priority: 'medium',
+          status: 'ready',
+          estimatedHours: undefined,
+          dueDate: '',
+          tagLabel: '',
+        });
+        setAssignees([]);
+      }
       loadFormData();
     }
-  }, [isOpen]);
+  }, [isOpen, task, projectId, milestoneId]);
 
   const loadFormData = async () => {
     try {
@@ -69,8 +100,9 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
       setProjects(projectsData);
 
       // Load milestones only if projectId is provided
-      if (projectId) {
-        const milestonesData = await milestoneService.getAllMilestones({ projectId });
+      const effectiveProjectId = task?.projectId || projectId;
+      if (effectiveProjectId) {
+        const milestonesData = await milestoneService.getAllMilestones({ projectId: effectiveProjectId });
         setMilestones(milestonesData);
       } else {
         setMilestones([]);
@@ -111,15 +143,30 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
 
     try {
       setIsLoading(true);
-      await taskService.createTask({
-        ...formData,
-        assignees,
-      } as CreateTaskDto & { assignees: number[] });
+
+      // Clean up empty strings - backend validation rejects empty strings for optional fields
+      const cleanedData = Object.fromEntries(
+        Object.entries(formData).filter(([_, v]) => v !== '' && v !== undefined)
+      );
+
+      if (task) {
+        // Update existing task
+        await taskService.updateTask(task.id, {
+          ...cleanedData,
+          assignees,
+        } as UpdateTaskDto & { assignees: number[] });
+      } else {
+        // Create new task
+        await taskService.createTask({
+          ...cleanedData,
+          assignees,
+        } as CreateTaskDto & { assignees: number[] });
+      }
       onSuccess();
       handleClose();
     } catch (err: any) {
-      console.error('Failed to create task:', err);
-      setError(err.response?.data?.message || 'Failed to create task');
+      console.error(`Failed to ${task ? 'update' : 'create'} task:`, err);
+      setError(err.response?.data?.error?.message || err.response?.data?.message || `Failed to ${task ? 'update' : 'create'} task`);
     } finally {
       setIsLoading(false);
     }
@@ -158,10 +205,10 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-aether-border-elevated">
           <div>
             <h2 className="text-xl font-bold text-aether-text-primary uppercase tracking-tight">
-              Create New Task
+              {task ? 'Edit Task' : 'Create New Task'}
             </h2>
             <p className="text-aether-text-muted font-mono text-xs uppercase tracking-widest mt-1">
-              Fill in the task details
+              {task ? 'Update task details' : 'Fill in the task details'}
             </p>
           </div>
           <button
@@ -443,7 +490,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({
               disabled={isLoading || isLoadingData}
               className="px-6 py-3 bg-aether-blue-primary text-white font-mono text-xs uppercase tracking-wider hover:bg-aether-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating...' : 'Create Task'}
+              {isLoading ? (task ? 'Updating...' : 'Creating...') : (task ? 'Update Task' : 'Create Task')}
             </button>
           </div>
         </form>

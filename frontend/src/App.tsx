@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import Groups from './pages/Groups';
+import Projects from './pages/Projects';
 import Milestones from './pages/Milestones';
 import KanbanBoard from './pages/KanbanBoard';
 import Login from './pages/Login';
@@ -28,6 +29,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Groups />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <Projects />
               </ProtectedRoute>
             }
           />

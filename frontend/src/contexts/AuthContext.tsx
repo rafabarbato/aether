@@ -66,16 +66,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      throw new Error('Network error. Please check your connection.');
+    }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error('Server error. Please try again later.');
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || 'Login failed');
+      throw new Error(data.error?.message || data.message || 'Login failed');
     }
 
     localStorage.setItem('accessToken', data.data.tokens.accessToken);
@@ -84,16 +94,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (userData: RegisterData) => {
-    const response = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+    } catch {
+      throw new Error('Network error. Please check your connection.');
+    }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error('Server error. Please try again later.');
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || 'Registration failed');
+      throw new Error(data.error?.message || data.message || 'Registration failed');
     }
 
     localStorage.setItem('accessToken', data.data.tokens.accessToken);
