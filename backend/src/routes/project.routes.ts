@@ -15,8 +15,8 @@ const createProjectSchema = Joi.object({
   description: Joi.string().allow('', null).optional(),
   color: Joi.string().max(20).optional(),
   teamId: Joi.number().integer().optional(),
-  startDate: Joi.date().optional(),
-  endDate: Joi.date().optional(),
+  startDate: Joi.date().allow('', null).optional(),
+  endDate: Joi.date().allow('', null).optional(),
   status: Joi.string().valid('planning', 'active', 'on_hold', 'completed', 'archived').default('planning'),
 });
 

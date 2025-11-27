@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, FolderOpen, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, FolderOpen, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import groupService, { CreateGroupData, UpdateGroupData } from '../services/groupService';
 import { Group } from '../types';
@@ -124,6 +125,7 @@ const GroupForm: React.FC<GroupFormProps> = ({ group, onSave, onCancel }) => {
 };
 
 const Groups: React.FC = () => {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -241,7 +243,8 @@ const Groups: React.FC = () => {
             {filteredGroups.map((group) => (
               <div
                 key={group.id}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer group"
+                onClick={() => navigate(`/projects?groupId=${group.id}`)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -283,10 +286,11 @@ const Groups: React.FC = () => {
                 )}
 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     <span className="font-mono font-bold">{group.projectCount || 0}</span> projects
+                    <ChevronRight className="w-4 h-4 text-blue-500 group-hover:translate-x-1 transition-transform" />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleToggleStatus(group.id)}
                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"

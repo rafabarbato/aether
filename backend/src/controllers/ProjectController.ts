@@ -33,7 +33,7 @@ class ProjectController {
     const filters = {
       groupId: req.query.groupId ? parseInt(req.query.groupId as string) : undefined,
       ownerId: req.query.ownerId ? parseInt(req.query.ownerId as string) : undefined,
-      status: req.query.status as string | string[],
+      status: req.query.status as any,
       search: req.query.search as string,
     };
 

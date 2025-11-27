@@ -5,6 +5,18 @@ import ApiError from '../utils/ApiError';
 import logger from '../utils/logger';
 
 class MilestoneService {
+  // Helper to sanitize date fields (convert empty strings to null)
+  private sanitizeDateFields(data: any): any {
+    const sanitized = { ...data };
+    if (sanitized.startDate === '' || sanitized.startDate === 'Invalid date') {
+      sanitized.startDate = null;
+    }
+    if (sanitized.endDate === '' || sanitized.endDate === 'Invalid date') {
+      sanitized.endDate = null;
+    }
+    return sanitized;
+  }
+
   async createMilestone(milestoneData: MilestoneCreationAttributes, userId: number): Promise<Milestone> {
     try {
       // Verify project exists and user has access
@@ -14,9 +26,12 @@ class MilestoneService {
         throw ApiError.notFound('Project not found');
       }
 
+      // Sanitize date fields
+      const sanitizedData = this.sanitizeDateFields(milestoneData);
+
       // Set creator
       const milestone = await MilestoneRepository.create({
-        ...milestoneData,
+        ...sanitizedData,
         createdBy: userId,
       });
 
@@ -65,7 +80,10 @@ class MilestoneService {
         throw ApiError.notFound('Project not found');
       }
 
-      const updatedMilestone = await MilestoneRepository.update(milestoneId, updates);
+      // Sanitize date fields
+      const sanitizedUpdates = this.sanitizeDateFields(updates);
+
+      const updatedMilestone = await MilestoneRepository.update(milestoneId, sanitizedUpdates);
 
       return await MilestoneRepository.findById(milestoneId, true) as Milestone;
     } catch (error) {

@@ -1,5 +1,6 @@
-import { DataTypes, Model, Optional } from 'sequelize';
+import { DataTypes, Model, Optional, Association } from 'sequelize';
 import sequelize from '../../config/database';
+import User from './User';
 
 export interface CommentAttributes {
   id: number;
@@ -25,6 +26,15 @@ class Comment extends Model<CommentAttributes, CommentCreationAttributes> implem
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
   public readonly deletedAt?: Date;
+
+  // Associations
+  public readonly user?: User;
+  public readonly replies?: Comment[];
+
+  public static associations: {
+    user: Association<Comment, User>;
+    replies: Association<Comment, Comment>;
+  };
 }
 
 Comment.init(

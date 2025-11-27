@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Target, Calendar, TrendingUp } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Target, Calendar, TrendingUp, ChevronRight } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import Breadcrumb from '../components/Breadcrumb';
 import milestoneService, { CreateMilestoneData, UpdateMilestoneData, MilestoneStats } from '../services/milestoneService';
-import { Milestone, MilestoneType, MilestoneStatus } from '../types';
+import projectService from '../services/projectService';
+import groupService from '../services/groupService';
+import { Milestone, MilestoneType, MilestoneStatus, Project, Group } from '../types';
 
 interface MilestoneFormProps {
   milestone?: Milestone;
+  projectId?: number;
   onSave: (data: CreateMilestoneData | UpdateMilestoneData) => Promise<void>;
   onCancel: () => void;
 }
 
-const MilestoneForm: React.FC<MilestoneFormProps> = ({ milestone, onSave, onCancel }) => {
+const MilestoneForm: React.FC<MilestoneFormProps> = ({ milestone, projectId, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
-    projectId: milestone?.projectId || 0,
+    projectId: milestone?.projectId || projectId || 0,
     name: milestone?.name || '',
     description: milestone?.description || '',
     type: milestone?.type || 'milestone' as MilestoneType,
@@ -44,7 +49,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({ milestone, onSave, onCanc
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {!milestone && (
+          {!milestone && !projectId && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
                 Project ID *
@@ -182,7 +187,13 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({ milestone, onSave, onCanc
 };
 
 const Milestones: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get('projectId');
+
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<MilestoneType | ''>('');
@@ -191,13 +202,32 @@ const Milestones: React.FC = () => {
   const [editingMilestone, setEditingMilestone] = useState<Milestone | undefined>();
 
   useEffect(() => {
-    loadMilestones();
-  }, []);
+    if (projectId) {
+      loadProject(parseInt(projectId));
+      loadMilestones(parseInt(projectId));
+    } else {
+      loadMilestones();
+    }
+  }, [projectId]);
 
-  const loadMilestones = async () => {
+  const loadProject = async (id: number) => {
+    try {
+      const project = await projectService.getProjectById(id);
+      setSelectedProject(project);
+      if (project.groupId) {
+        const group = await groupService.getGroupById(project.groupId);
+        setSelectedGroup(group);
+      }
+    } catch (error) {
+      console.error('Failed to load project:', error);
+    }
+  };
+
+  const loadMilestones = async (filterProjectId?: number) => {
     try {
       setIsLoading(true);
-      const fetchedMilestones = await milestoneService.getAllMilestones();
+      const filters = filterProjectId ? { projectId: filterProjectId } : {};
+      const fetchedMilestones = await milestoneService.getAllMilestones(filters);
       setMilestones(fetchedMilestones);
     } catch (error) {
       console.error('Failed to load milestones:', error);
@@ -210,7 +240,7 @@ const Milestones: React.FC = () => {
     try {
       await milestoneService.createMilestone(data);
       setShowForm(false);
-      await loadMilestones();
+      await loadMilestones(projectId ? parseInt(projectId) : undefined);
     } catch (error) {
       console.error('Failed to create milestone:', error);
     }
@@ -222,7 +252,7 @@ const Milestones: React.FC = () => {
       await milestoneService.updateMilestone(editingMilestone.id, data);
       setShowForm(false);
       setEditingMilestone(undefined);
-      await loadMilestones();
+      await loadMilestones(projectId ? parseInt(projectId) : undefined);
     } catch (error) {
       console.error('Failed to update milestone:', error);
     }
@@ -232,7 +262,7 @@ const Milestones: React.FC = () => {
     if (!confirm('Are you sure you want to delete this milestone?')) return;
     try {
       await milestoneService.deleteMilestone(id);
-      await loadMilestones();
+      await loadMilestones(projectId ? parseInt(projectId) : undefined);
     } catch (error) {
       console.error('Failed to delete milestone:', error);
     }
@@ -257,17 +287,31 @@ const Milestones: React.FC = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
+  const breadcrumbItems = [];
+  if (selectedGroup) {
+    breadcrumbItems.push({ label: 'Groups', path: '/groups' });
+    breadcrumbItems.push({ label: selectedGroup.name, path: `/projects?groupId=${selectedGroup.id}` });
+  }
+  if (selectedProject) {
+    breadcrumbItems.push({ label: selectedProject.name });
+  }
+  if (!selectedProject && !selectedGroup) {
+    breadcrumbItems.push({ label: 'All Milestones' });
+  }
+
   return (
     <Layout>
       <div className="p-8">
+        <Breadcrumb items={breadcrumbItems} />
+
         <div className="mb-8 flex items-center space-x-4">
           <div className="h-10 w-1 bg-orange-500"></div>
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">
-              Milestones & Sprints
+              {selectedProject ? `${selectedProject.name} - Milestones` : 'Milestones & Sprints'}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 font-sans text-xs uppercase tracking-widest mt-1">
-              Track Project Progress
+              {selectedProject ? `Track progress in ${selectedProject.name}` : 'Track Project Progress'}
             </p>
           </div>
         </div>
@@ -324,7 +368,8 @@ const Milestones: React.FC = () => {
             {filteredMilestones.map((milestone) => (
               <div
                 key={milestone.id}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer group"
+                onClick={() => navigate(`/tasks?milestoneId=${milestone.id}`)}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -364,24 +409,30 @@ const Milestones: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => {
-                      setEditingMilestone(milestone);
-                      setShowForm(true);
-                    }}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                    title="Edit"
-                  >
-                    <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(milestone.id)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  </button>
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-xs uppercase">View tasks</span>
+                    <ChevronRight className="w-4 h-4 text-orange-500 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => {
+                        setEditingMilestone(milestone);
+                        setShowForm(true);
+                      }}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(milestone.id)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -408,6 +459,7 @@ const Milestones: React.FC = () => {
         {showForm && (
           <MilestoneForm
             milestone={editingMilestone}
+            projectId={projectId ? parseInt(projectId) : undefined}
             onSave={editingMilestone ? handleUpdate : handleCreate}
             onCancel={() => {
               setShowForm(false);

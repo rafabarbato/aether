@@ -1,5 +1,6 @@
-import { DataTypes, Model, Optional } from 'sequelize';
+import { DataTypes, Model, Optional, Association } from 'sequelize';
 import sequelize from '../../config/database';
+import User from './User';
 
 export interface AttachmentAttributes {
   id: number;
@@ -29,6 +30,13 @@ class Attachment extends Model<AttachmentAttributes, AttachmentCreationAttribute
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
   public readonly deletedAt?: Date;
+
+  // Associations
+  public readonly user?: User;
+
+  public static associations: {
+    user: Association<Attachment, User>;
+  };
 }
 
 Attachment.init(

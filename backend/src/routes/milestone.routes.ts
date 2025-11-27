@@ -15,8 +15,8 @@ const createMilestoneSchema = Joi.object({
   description: Joi.string().allow('', null).optional(),
   type: Joi.string().valid('milestone', 'sprint').default('milestone'),
   status: Joi.string().valid('planning', 'active', 'completed', 'cancelled').default('planning'),
-  startDate: Joi.date().optional(),
-  endDate: Joi.date().optional(),
+  startDate: Joi.date().allow('', null).optional(),
+  endDate: Joi.date().allow('', null).optional(),
   iconUrl: Joi.string().uri().allow('', null).optional(),
 });
 

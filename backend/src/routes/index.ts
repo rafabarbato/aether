@@ -5,6 +5,8 @@ import projectRoutes from './project.routes';
 import taskRoutes from './task.routes';
 import milestoneRoutes from './milestone.routes';
 import userRoutes from './user.routes';
+import commentRoutes from './comment.routes';
+import attachmentRoutes from './attachment.routes';
 
 const router = Router();
 
@@ -14,6 +16,8 @@ router.use('/projects', projectRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/milestones', milestoneRoutes);
 router.use('/users', userRoutes);
+router.use('/comments', commentRoutes);
+router.use('/attachments', attachmentRoutes);
 
 // Health check
 router.get('/health', (req, res) => {
